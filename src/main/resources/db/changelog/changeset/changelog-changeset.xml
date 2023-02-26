@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <!--    <changeSet id="1-Create-tables" author="Sofia Chernikova">-->
+    <!--        <sqlFile path="changeset/tables/create-table-user.sql" relativeToChangelogFile="true"/>-->
+    <!--    </changeSet>-->
+    <!--    <changeSet id="2-Create-tables" author="Sofia Chernikova">-->
+    <!--        <sqlFile path="changeset/tables/create-table-role.sql" relativeToChangelogFile="true"/>-->
+    <!--        <sqlFile path="changeset/tables/alter-tables.sql" relativeToChangelogFile="true"/>-->
+    <!--        <sqlFile path="changeset/tables/create-table-user_role.sql" relativeToChangelogFile="true"/>-->
+    <!--    </changeSet>-->
+
+    <changeSet id="Create-tables-1" author="Sofia Chernikova">
+        <sqlFile path="changeset/tables/create-table-user.sql" relativeToChangelogFile="true"/>
+        <sqlFile path="changeset/tables/create-table-role.sql" relativeToChangelogFile="true"/>
+        <sqlFile path="changeset/tables/create-table-user_role.sql" relativeToChangelogFile="true"/>
+        <sqlFile path="changeset/tables/create-table-wallet.sql" relativeToChangelogFile="true"/>
+    </changeSet>
+</databaseChangeLog>
