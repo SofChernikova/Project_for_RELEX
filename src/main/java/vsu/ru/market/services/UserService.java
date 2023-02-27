@@ -3,169 +3,211 @@ package vsu.ru.market.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import vsu.ru.market.controllers.requests.AllWalletsRequest;
+import org.springframework.transaction.annotation.Transactional;
+import vsu.ru.market.models.Transaction;
 import vsu.ru.market.models.User;
 import vsu.ru.market.models.Wallet;
+import vsu.ru.market.repo.TransactionRepository;
 import vsu.ru.market.repo.UserRepository;
 import vsu.ru.market.repo.WalletRepository;
+import vsu.ru.market.services.optional.AdditionalService;
 import vsu.ru.market.services.optional.ExchangeRate;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+
 import java.util.*;
+
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final TransactionService transactionService;
 
     public User extractUser(String secretKey) {
-        User user = userRepository.findBySecretKey(secretKey).orElseThrow(() -> new UsernameNotFoundException("No user found :( "));
-        return user;
-    }
-
-    public Map<String, String> getAllWallets(AllWalletsRequest allWalletsRequest) {
-        var user = userRepository.findBySecretKey(allWalletsRequest.getKey());
-        Map<String, String> map = new HashMap<>();
-
-        if (!user.isEmpty()) {
-            Set<Wallet> wallets = user.get().getWallets();
-            for (Wallet wallet : wallets) {
-                map.put(wallet.getWalletName(), wallet.getSum().toString());
-            }
-        } else {
-            map.put("error:", "Ошибка в значении ключа!");
+        User user = null;
+        try {
+            user = userRepository.findBySecretKey(secretKey).orElseThrow();
+        } catch (UsernameNotFoundException e) {
+        } finally {
+            return user;
         }
-        return map;
     }
 
-
-    public Map<String, String> replenishBalance(Map<String, String> request) {
-        String key = request.get("key");
-        var user = userRepository.findBySecretKey(key);
+    public Map<String, String> getAllWallets(User user) {
         Map<String, String> result = new HashMap<>();
 
-        if (!user.isEmpty()) {
-            request.remove("key");
-            Set<Wallet> wallets = user.get().getWallets();
+        Set<Wallet> wallets = user.getWallets();
 
-            for (Map.Entry<String, String> requestWalletEntry : request.entrySet()) {
-                for (Wallet userWallet : wallets) {
-                    if (userWallet.getWalletName().equals(requestWalletEntry.getKey())) {
-                        userWallet.setSum(userWallet.getSum().add(new BigDecimal(requestWalletEntry.getValue())));
-                        result.put(userWallet.getWalletName(), userWallet.getSum().toString());
-                        walletRepository.save(userWallet);
-                        break;
-                    }
-                }
-            }
-        } else {
-            result.put("error:", "Ошибка в значении ключа!");
+        if (wallets.isEmpty()) {
+            result.put("error", "Нет активных кошельков!");
+            return result;
+        }
+
+        for (Wallet wallet : wallets) {
+            result.put(wallet.getWalletName() + "_wallet", wallet.getSum().toString());
         }
         return result;
     }
 
-    public Map<String, String> withdrawMoney(Map<String, String> request) {
-        ArrayList<String> values = new ArrayList<>(request.values());
-        String key = values.get(0);
-        var user = userRepository.findBySecretKey(key);
+
+    public Map<String, String> replenishBalance(User user, Map<String, String> request) {
         Map<String, String> result = new HashMap<>();
 
-        if (!user.isEmpty()) {
-            String currencyWallet = values.get(1);
-            BigDecimal sum = new BigDecimal(values.get(2));
-            String withdrawalName = values.get(3);
-            var withdrawalWallet = Wallet.builder().walletName(withdrawalName).build();
+        String[] requiredParam = {"RUB", "DOL", "EURO"};
+        if (!AdditionalService.areParametersValid(request, requiredParam, 0)) {
+            result.put("error", "Нет необходимого параметра!");
+            return result;
+        }
 
-            Set<Wallet> wallets = user.get().getWallets();
+        Set<Wallet> wallets = user.getWallets();
 
-            for (Wallet userWallet : wallets) {
-                if (userWallet.getWalletName().equals(currencyWallet)) {
-                    BigDecimal newSum = userWallet.getSum().subtract(sum);
-                    if (check(newSum, new BigDecimal(0))) {
-                        withdrawalWallet.setSum(sum);
-                        userWallet.setSum(newSum);
-                        result.put(currencyWallet, newSum.toString());
-                        walletRepository.save(userWallet);
-                    } else {
-                        result.put("error:", "Недостаточно средств!");
-                    }
-                    break;
-                }
+        if (wallets.isEmpty()) {
+            result.put("error", "Нет активных кошельков!");
+            return result;
+        }
+
+        List<String> requiredSum = new ArrayList<>(request.values());
+        String walletName = request.keySet().toString().substring(1, 4);
+
+        boolean found = false;
+        for (Wallet curr : wallets) {
+            if (curr.getWalletName().equals(walletName)) {
+                found = true;
+                curr.setSum(curr.getSum().add(new BigDecimal(requiredSum.get(0))));
+                result.put(curr.getWalletName() + "_wallet", curr.getSum().toString());
+                walletRepository.save(curr);
+
+                long now = System.currentTimeMillis();
+                transactionService.createTransaction(now);
+
+                break;
             }
-        } else {
-            result.put("error:", "Ошибка в значении ключа!");
         }
-        return null;
+
+        if (!found) {
+            result.put("error", "Нет запрашиваемого кошелька!");
+            return result;
+        }
+
+        return result;
     }
 
-    public Map<String, String> exchangeRate(Map<String, String> request) {
-        ArrayList<String> values = new ArrayList<>(request.values());
-        String key = values.get(0);
-        var user = userRepository.findBySecretKey(key);
-        Map<String, String> rates = new HashMap<>();
-        if (!user.isEmpty()) {
-            String currencyWallet = values.get(1);
-            rates = ExchangeRate.getRate().get(currencyWallet);
-        } else {
-            rates.put("error:", "Ошибка в значении ключа!");
+    public Map<String, String> withdrawMoney(User user, Map<String, String> request) {
+        Map<String, String> result = new HashMap<>();
+
+        String[] requiredParam = {"currency", "count"};
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)
+                && (!request.containsKey("card") || !request.containsKey("wallet"))) {
+            result.put("error", "Нет необходимого параметра!");
+            return result;
         }
-        return rates;
+
+        Set<Wallet> wallets = user.getWallets();
+
+        if (wallets.isEmpty()) {
+            result.put("error", "Нет активных кошельков!");
+            return result;
+        }
+
+        List<String> values = new ArrayList<>(request.values());
+        String currency = values.get(0);
+        BigDecimal sum = new BigDecimal(values.get(1));
+
+        boolean found = false;
+        for (Wallet curr : wallets) {
+            if (curr.getWalletName().equals(currency)) {
+                found = true;
+                BigDecimal newSum = curr.getSum().subtract(sum);
+
+                if (!isEnoughMoney(newSum, new BigDecimal(0))) {
+                    result.put("error:", "Недостаточно средств!");
+                }
+
+                curr.setSum(newSum);
+                result.put(currency + "_wallet", newSum.toString());
+                walletRepository.save(curr);
+
+                long now = System.currentTimeMillis();
+                transactionService.createTransaction(now);
+                break;
+            }
+        }
+
+        if (!found) {
+            result.put("error", "Нет запрашиваемого кошелька!");
+            return result;
+        }
+
+        return result;
     }
 
-    public Map<String, String> exchangeMoney(Map<String, String> request) {
-        ArrayList<String> values = new ArrayList<>(request.values());
-        String key = values.get(0);
-        var user = userRepository.findBySecretKey(key);
+    public Map<String, String> exchangeMoney(User user, Map<String, String> request) {
         Map<String, String> result = new TreeMap<>();
 
-        if (!user.isEmpty()) {
-            Set<Wallet> wallets = user.get().getWallets();
-
-            String currencyFrom = values.get(1);
-            String currencyTo = values.get(2);
-            BigDecimal amount = new BigDecimal(values.get(3));
-
-            Wallet walletTo = new Wallet();
-
-            boolean isEnough = false;
-            for (Wallet wallet : wallets) {
-                if (wallet.getWalletName().equals(currencyFrom)) {
-                    if (check(wallet.getSum(), amount)) {
-                        wallet.setSum(wallet.getSum().subtract(amount));
-                        isEnough = true;
-                        walletRepository.save(wallet);
-                        continue;
-                    } else {
-                        result.put("error:", "Недостаточно средств!");
-                        break;
-                    }
-                }
-                if (wallet.getWalletName().equals(currencyTo)) walletTo = wallet;
-            }
-
-            if (isEnough) {
-                String rateStr = ExchangeRate.getRate().get(currencyFrom).get(currencyTo);
-                BigDecimal rateDec = new BigDecimal(rateStr);
-                BigDecimal previous = walletTo.getSum();
-                BigDecimal current = amount.multiply(rateDec);
-                walletTo.setSum(previous.add(current));
-                walletRepository.save(walletTo);
-
-                result.put("currency_from", currencyFrom);
-                result.put("currency_to", currencyTo);
-                result.put("amount_from", amount.toString());
-                result.put("amount_to", current.toString());
-            }
-        } else {
-            result.put("error:", "Ошибка в значении ключа!");
+        String[] requiredParam = {"from", "to", "amount"};
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)) {
+            result.put("error", "Нет необходимого параметра!");
+            return result;
         }
+
+        Set<Wallet> wallets = user.getWallets();
+
+        if (wallets.isEmpty()) {
+            result.put("error", "Нет активных кошельков!");
+            return result;
+        }
+
+        List<String> values = new ArrayList<>(request.values());
+        String currencyFrom = values.get(0);
+        String currencyTo = values.get(1);
+        BigDecimal amount = new BigDecimal(values.get(2));
+
+        Wallet walletTo = new Wallet();
+        Wallet walletFrom = new Wallet();
+
+        for (Wallet wallet : wallets) {
+            if (wallet.getWalletName().equals(currencyFrom)) {
+                if (!isEnoughMoney(wallet.getSum(), amount)) {
+                    result.put("error:", "Недостаточно средств!");
+                    return result;
+                }
+                walletFrom = wallet;
+                wallet.setSum(wallet.getSum().subtract(amount));
+                walletRepository.save(wallet);
+                continue;
+            }
+            if (wallet.getWalletName().equals(currencyTo)) walletTo = wallet;
+        }
+
+        if (walletTo.getWalletName() == null || walletFrom.getWalletName() == null) {
+            result.put("error", "Нет кошелька с таким именем");
+            return result;
+        }
+
+        String rateStr = ExchangeRate.getRate().get(currencyFrom).get(currencyTo);
+        BigDecimal rateDec = new BigDecimal(rateStr);
+        BigDecimal previous = walletTo.getSum();
+        BigDecimal current = amount.multiply(rateDec);
+        walletTo.setSum(previous.add(current));
+        walletRepository.save(walletTo);
+
+        long now = System.currentTimeMillis();
+        transactionService.createTransaction(now);
+
+
+        result.put("currency_from", currencyFrom + "_wallet");
+        result.put("currency_to", currencyTo + "_wallet");
+        result.put("amount_from", amount.toString());
+        result.put("amount_to", current.toString());
+
         return result;
     }
 
-    private boolean check(BigDecimal value1, BigDecimal value2) {
+    private boolean isEnoughMoney(BigDecimal value1, BigDecimal value2) {
         if (value1.compareTo(value2) < 0) return false;
         return true;
     }
+
 }

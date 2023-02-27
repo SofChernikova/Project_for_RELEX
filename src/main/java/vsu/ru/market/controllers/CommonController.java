@@ -3,22 +3,23 @@ package vsu.ru.market.controllers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vsu.ru.market.services.AuthenticationService;
+import vsu.ru.market.services.CommonService;
+
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/common")
 @RequiredArgsConstructor
-public class AuthenticationController {
-    private final AuthenticationService service;
+public class CommonController {
+    private final CommonService commonService;
 
-    @PostMapping("/register")
-    public ResponseEntity registration(@RequestBody Map<String, String> request){
-        Map<String, String> result = service.register(request);
+    @GetMapping("/exchangeRate")
+    public ResponseEntity exchangeRate(@RequestBody Map<String, String> request) {
+        Map<String, String> result = commonService.exchangeRate(request);
 
         if (result.containsKey("error")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -27,3 +28,4 @@ public class AuthenticationController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 }
+

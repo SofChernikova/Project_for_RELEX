@@ -1,12 +1,10 @@
 package vsu.ru.market.services.optional;
 
-import lombok.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
-
-
+/**
+ * Дополнительный класс для получения курса валют */
 public class ExchangeRate {
 
     public static Map<String, Map<String, String>> getRate() {

@@ -5,16 +5,18 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+@Transactional
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "_user")
+@Table(name = "my_user")
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,6 +35,7 @@ public class User implements UserDetails {
             columnDefinition = "varchar(255)")
     private String secretKey;
 
+
     @ManyToMany(cascade = {
             CascadeType.PERSIST,
             CascadeType.MERGE
@@ -45,14 +48,9 @@ public class User implements UserDetails {
     private Set<Role> roles = new HashSet<>();
 
     @OneToMany(cascade = CascadeType.MERGE,
-            mappedBy = "user")
+            mappedBy = "user", fetch = FetchType.EAGER)
     private Set<Wallet> wallets = new HashSet<>();
 
-    // todo кошель со связью многие к одному (у одного пользователя много кошельков разных)
-
-    /**
-     * @return список ролей (разрешений) пользователя
-     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Collection<GrantedAuthority> authorities = new ArrayList<>(roles.size());

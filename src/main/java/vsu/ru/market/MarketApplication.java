@@ -12,4 +12,3 @@ public class MarketApplication {
 
 }
 
-// todo класс кошелька: ид, название, сумма (децимал)

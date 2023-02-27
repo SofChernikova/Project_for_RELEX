@@ -27,7 +27,11 @@ public class SecurityConfiguration {
                 .requestMatchers("/api/v1/auth/**")
                 .permitAll()
                 .requestMatchers("/api/v1/user/**")
-                .permitAll()
+                .hasAnyAuthority("USER")
+                .requestMatchers("/api/v1/common/**")
+                .hasAnyAuthority("USER", "ADMIN")
+                .requestMatchers("/api/v1/admin/**")
+                .hasAnyAuthority("ADMIN")
                 .anyRequest()
                 .authenticated()
                 .and()
@@ -40,7 +44,5 @@ public class SecurityConfiguration {
 
        return httpSecurity.build();
     }
-    // todo дописать значит сюда пути из контроллеров и назначить им возможные роли
-    //  .requestMatchers("/api/v1/auth/**").hasAnyAuthority("CUSTOMER", "ADMIN")
 
 }

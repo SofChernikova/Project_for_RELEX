@@ -1,21 +1,23 @@
 package vsu.ru.market.services;
 
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Service;
-import vsu.ru.market.controllers.responses.AuthenticationResponse;
-import vsu.ru.market.controllers.requests.RegisterRequest;
+
+
+import org.springframework.transaction.annotation.Transactional;
 import vsu.ru.market.models.Role;
 import vsu.ru.market.models.User;
+
 import vsu.ru.market.repo.RoleRepository;
 import vsu.ru.market.repo.UserRepository;
+import vsu.ru.market.services.optional.AdditionalService;
 
 import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -24,36 +26,66 @@ public class AuthenticationService {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
 
-    private String generateSecretKey(RegisterRequest registerRequest) throws NoSuchAlgorithmException {
-        String input = registerRequest.getUsername() + registerRequest.getEmail();
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-        String key = DatatypeConverter.printHexBinary(digest);
-        return key;
-    }
-
-    public AuthenticationResponse register(RegisterRequest registerRequest) throws NoSuchAlgorithmException {
-        var tempUser = repository.findByUsername(registerRequest.getUsername());
-        var tempUser1 = repository.findByEmail(registerRequest.getEmail());
-
-        if (tempUser.isEmpty() && tempUser1.isEmpty()) {
-            String key = generateSecretKey(registerRequest);
-            Role role = roleRepository.findById(2).orElseThrow();
-            Set<Role> set = new HashSet<>();
-            set.add(role);
-            var user = User.builder()
-                    .username(registerRequest.getUsername())
-                    .email(registerRequest.getEmail())
-                    .secretKey(key)
-                    .roles(set)
-                    .build();
-            repository.save(user);
-            var response = AuthenticationResponse.builder()
-                    .secretKey(key)
-                    .build();
-            return response;
+    private String generateSecretKey(String username, String email) {
+        try {
+            String input = username + email;
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            String key = DatatypeConverter.printHexBinary(digest);
+            return key;
+        } catch (NoSuchAlgorithmException e) {
+            return null;
         }
-        return null;
     }
 
+
+    @Transactional
+    public Map<String, String> register(Map<String, String> request) {
+        Map<String, String> result = new HashMap<>();
+
+        String[] requiredParam = {"username", "email"};
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)) {
+            result.put("error", "Нет необходимого параметра!");
+            return result;
+        }
+        String username = request.get("username");
+        String email = request.get("email");
+
+        var byUsername = repository.findByUsername(username);
+        var byEmail = repository.findByEmail(email);
+
+        if (!byUsername.isEmpty()) {
+            result.put("error", "Не уникальное имя пользователя!");
+            return result;
+        }
+        if (!byEmail.isEmpty()) {
+            result.put("error", "Не уникальная почта!");
+            return result;
+        }
+
+        String key = generateSecretKey(username, email);
+        if (key == null) {
+            result.put("error", "Не удалось создать ключ");
+            return result;
+        }
+
+        Optional<Role> role = roleRepository.findById(2);
+        if (role.isEmpty()) {
+            result.put("error", "Не удалось получить роль!");
+            return result;
+        }
+
+        Set<Role> set = new HashSet<>();
+        set.add(role.get());
+        var user = User.builder()
+                .username(username)
+                .email(email)
+                .secretKey(key)
+                .roles(set)
+                .build();
+        repository.save(user);
+
+        result.put("key", key);
+        return result;
+    }
 }
