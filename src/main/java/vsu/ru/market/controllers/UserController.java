@@ -14,6 +14,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/user")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserService userService;
 
     @GetMapping("/wallets")

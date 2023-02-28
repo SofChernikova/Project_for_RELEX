@@ -28,6 +28,7 @@ public class CommonService {
                 break;
             }
         }
+        
 
         if (!found) {
             result.put("error", "Нет кошелька с таким именем");

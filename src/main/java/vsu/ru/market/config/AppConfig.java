@@ -14,6 +14,7 @@ import vsu.ru.market.repo.UserRepository;
 public class AppConfig {
     private final UserRepository repository;
 
+
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> repository.findByUsername(username)

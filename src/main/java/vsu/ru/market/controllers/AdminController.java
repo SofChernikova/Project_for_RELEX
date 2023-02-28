@@ -15,7 +15,6 @@ public class AdminController {
 
     private final AdminService adminService;
 
-
     @PostMapping("/changeExchangeRate")
     public ResponseEntity changeExchangeRate(@RequestBody Map<String, String> request) {
         Map<String, String> result = adminService.changeExchangeRate(request);

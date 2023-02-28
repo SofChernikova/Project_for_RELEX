@@ -15,6 +15,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/common")
 @RequiredArgsConstructor
 public class CommonController {
+
     private final CommonService commonService;
 
     @GetMapping("/exchangeRate")

@@ -168,6 +168,7 @@ public class UserService {
             return result;
         }
 
+
         Wallet walletTo = new Wallet();
 
         for (Wallet wallet : wallets) {
