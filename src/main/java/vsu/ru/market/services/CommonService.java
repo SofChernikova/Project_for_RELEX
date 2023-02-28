@@ -21,6 +21,19 @@ public class CommonService {
             return result;
         }
 
+        boolean found = false;
+        for (String s : new String[]{"RUB", "DOL", "EURO"}) {
+            if (request.containsKey(s)) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            result.put("error", "Нет кошелька с таким именем");
+            return result;
+        }
+
         result = ExchangeRate.getRate().get(request.get("currency"));
 
         return result;

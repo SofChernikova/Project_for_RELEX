@@ -24,8 +24,7 @@ public class AdminService {
         Map<String, String> result = new HashMap<>();
 
         String[] requiredParam = {"currency"};
-        if (!AdditionalService.areParametersValid(request, requiredParam, 1)
-                && request.size() == 3) {
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)) {
             result.put("error", "Нет необходимого параметра!");
             return result;
         }

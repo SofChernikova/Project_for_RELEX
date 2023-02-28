@@ -57,7 +57,7 @@ public class UserService {
 
         String[] requiredParam = {"RUB", "DOL", "EURO"};
         if (!AdditionalService.areParametersValid(request, requiredParam, 0)) {
-            result.put("error", "Нет необходимого параметра!");
+            result.put("error", "Нет запрашиваемого кошелька или тело запроса пустое!");
             return result;
         }
 
@@ -71,10 +71,8 @@ public class UserService {
         List<String> requiredSum = new ArrayList<>(request.values());
         String walletName = request.keySet().toString().substring(1, 4);
 
-        boolean found = false;
         for (Wallet curr : wallets) {
             if (curr.getWalletName().equals(walletName)) {
-                found = true;
                 curr.setSum(curr.getSum().add(new BigDecimal(requiredSum.get(0))));
                 result.put(curr.getWalletName() + "_wallet", curr.getSum().toString());
                 walletRepository.save(curr);
@@ -85,12 +83,6 @@ public class UserService {
                 break;
             }
         }
-
-        if (!found) {
-            result.put("error", "Нет запрашиваемого кошелька!");
-            return result;
-        }
-
         return result;
     }
 
@@ -123,6 +115,7 @@ public class UserService {
 
                 if (!isEnoughMoney(newSum, new BigDecimal(0))) {
                     result.put("error:", "Недостаточно средств!");
+                    return result;
                 }
 
                 curr.setSum(newSum);
@@ -164,8 +157,18 @@ public class UserService {
         String currencyTo = values.get(1);
         BigDecimal amount = new BigDecimal(values.get(2));
 
+        boolean foundFrom = false;
+        boolean foundTo = false;
+        for (String s : new String[]{"RUB", "DOL", "EURO"}){
+            if(s.equals(currencyTo)) foundTo = true;
+            if(s.equals(currencyFrom)) foundFrom = true;
+        }
+        if(!foundFrom || !foundTo){
+            result.put("error", "Нет кошелька с таким именем");
+            return result;
+        }
+
         Wallet walletTo = new Wallet();
-        Wallet walletFrom = new Wallet();
 
         for (Wallet wallet : wallets) {
             if (wallet.getWalletName().equals(currencyFrom)) {
@@ -173,7 +176,6 @@ public class UserService {
                     result.put("error:", "Недостаточно средств!");
                     return result;
                 }
-                walletFrom = wallet;
                 wallet.setSum(wallet.getSum().subtract(amount));
                 walletRepository.save(wallet);
                 continue;
@@ -181,10 +183,6 @@ public class UserService {
             if (wallet.getWalletName().equals(currencyTo)) walletTo = wallet;
         }
 
-        if (walletTo.getWalletName() == null || walletFrom.getWalletName() == null) {
-            result.put("error", "Нет кошелька с таким именем");
-            return result;
-        }
 
         String rateStr = ExchangeRate.getRate().get(currencyFrom).get(currencyTo);
         BigDecimal rateDec = new BigDecimal(rateStr);
