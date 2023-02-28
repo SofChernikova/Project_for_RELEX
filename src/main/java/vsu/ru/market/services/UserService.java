@@ -114,7 +114,7 @@ public class UserService {
                 BigDecimal newSum = curr.getSum().subtract(sum);
 
                 if (!isEnoughMoney(newSum, new BigDecimal(0))) {
-                    result.put("error:", "Недостаточно средств!");
+                    result.put("error", "Недостаточно средств!");
                     return result;
                 }
 
@@ -174,7 +174,7 @@ public class UserService {
         for (Wallet wallet : wallets) {
             if (wallet.getWalletName().equals(currencyFrom)) {
                 if (!isEnoughMoney(wallet.getSum(), amount)) {
-                    result.put("error:", "Недостаточно средств!");
+                    result.put("error", "Недостаточно средств!");
                     return result;
                 }
                 wallet.setSum(wallet.getSum().subtract(amount));
