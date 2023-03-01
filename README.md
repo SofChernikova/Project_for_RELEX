@@ -78,9 +78,7 @@
    
 - rate
 
-| rate_id  | currency_name |   exchange_name              | rate  |
-|-----|------------------|--------------------|---------------------------------|
-| rate_id  | currency_name |   exchange_name                                         | rate  |
+| rate_id  | currency_name |   exchange_name     | rate  |
 |-----|------------------|--------------------|---------------------------------|
   3 | EURO          | RUB           | 80.180
    4 | EURO          | DOL           |  1.060
