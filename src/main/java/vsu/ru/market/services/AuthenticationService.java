@@ -11,7 +11,7 @@ import vsu.ru.market.models.User;
 
 import vsu.ru.market.repo.RoleRepository;
 import vsu.ru.market.repo.UserRepository;
-import vsu.ru.market.services.optional.AdditionalService;
+import vsu.ru.market.services.utils.AdditionalService;
 
 import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
@@ -51,6 +51,11 @@ public class AuthenticationService {
         }
         String username = request.get("username");
         String email = request.get("email");
+
+        if(username.length() == 0 || email.length() == 0){
+            result.put("error", "Нет значений параметров!");
+            return result;
+        }
 
         var byUsername = repository.findByUsername(username);
         var byEmail = repository.findByEmail(email);

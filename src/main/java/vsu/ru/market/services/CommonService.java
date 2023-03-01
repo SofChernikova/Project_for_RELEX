@@ -2,15 +2,19 @@ package vsu.ru.market.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import vsu.ru.market.services.optional.AdditionalService;
-import vsu.ru.market.services.optional.ExchangeRate;
+import vsu.ru.market.models.ExchangeRate;
+import vsu.ru.market.services.utils.AdditionalService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class CommonService {
+
+    private final ExchangeRateService rateService;
 
     public Map<String, String> exchangeRate(Map<String, String> request) {
         Map<String, String> result = new HashMap<>();
@@ -21,21 +25,17 @@ public class CommonService {
             return result;
         }
 
-        boolean found = false;
-        for (String s : new String[]{"RUB", "DOL", "EURO"}) {
-            if (s.equals(request.get("currency"))) {
-                found = true;
-                break;
-            }
-        }
-        
+        List<Optional<ExchangeRate>> rates = rateService.findRateByCurrencyName(request.get("currency"));
 
-        if (!found) {
+        if(rates.isEmpty()){
             result.put("error", "Нет кошелька с таким именем");
             return result;
         }
 
-        result = ExchangeRate.getRate().get(request.get("currency"));
+        for(Optional<ExchangeRate> rate : rates){
+            ExchangeRate exchangeRate = rate.get();
+            result.put(exchangeRate.getExchangeName(), String.valueOf(exchangeRate.getRate()));
+        }
 
         return result;
     }

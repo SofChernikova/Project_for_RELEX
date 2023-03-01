@@ -4,14 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vsu.ru.market.models.Transaction;
+import vsu.ru.market.models.ExchangeRate;
 import vsu.ru.market.models.User;
 import vsu.ru.market.models.Wallet;
-import vsu.ru.market.repo.TransactionRepository;
 import vsu.ru.market.repo.UserRepository;
 import vsu.ru.market.repo.WalletRepository;
-import vsu.ru.market.services.optional.AdditionalService;
-import vsu.ru.market.services.optional.ExchangeRate;
+import vsu.ru.market.services.utils.AdditionalService;
+
 
 import java.math.BigDecimal;
 
@@ -24,6 +23,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final TransactionService transactionService;
+    private final ExchangeRateService rateService;
 
     public User extractUser(String secretKey) {
         User user = null;
@@ -69,6 +69,11 @@ public class UserService {
         }
 
         List<String> requiredSum = new ArrayList<>(request.values());
+
+        if(requiredSum.get(0).length() == 0){
+            result.put("error", "Нет значения параметра!");
+            return result;
+        }
         String walletName = request.keySet().toString().substring(1, 4);
 
         for (Wallet curr : wallets) {
@@ -91,11 +96,11 @@ public class UserService {
         Map<String, String> result = new HashMap<>();
 
         String[] requiredParam = {"currency", "count"};
-        if (!AdditionalService.areParametersValid(request, requiredParam, 1)){
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)) {
             result.put("error", "Нет необходимого параметра!");
             return result;
         }
-        if(!request.containsKey("card") && !request.containsKey("wallet")){
+        if (!request.containsKey("card") && !request.containsKey("wallet")) {
             result.put("error", "Нет необходимого параметра!");
             return result;
         }
@@ -108,8 +113,16 @@ public class UserService {
         }
 
         List<String> values = new ArrayList<>(request.values());
+
+        if(values.get(1).length() == 0 || values.get(2).length() == 0){
+            result.put("error", "Нет значения параметра!");
+            return result;
+        }
+
         String currency = values.get(0);
         BigDecimal sum = new BigDecimal(values.get(1));
+
+
 
         boolean found = false;
         for (Wallet curr : wallets) {
@@ -160,19 +173,19 @@ public class UserService {
         List<String> values = new ArrayList<>(request.values());
         String currencyFrom = values.get(0);
         String currencyTo = values.get(1);
+
+        if(values.get(2).length() == 0){
+            result.put("error", "Нет значения параметра!");
+            return result;
+        }
         BigDecimal amount = new BigDecimal(values.get(2));
 
-        boolean foundFrom = false;
-        boolean foundTo = false;
-        for (String s : new String[]{"RUB", "DOL", "EURO"}){
-            if(s.equals(currencyTo)) foundTo = true;
-            if(s.equals(currencyFrom)) foundFrom = true;
-        }
-        if(!foundFrom || !foundTo){
+        Optional<ExchangeRate> exchangeRate = rateService.findByCurrencyNameAndExchangeName(currencyFrom, currencyTo);
+
+        if (exchangeRate.isEmpty()) {
             result.put("error", "Нет кошелька с таким именем");
             return result;
         }
-
 
         Wallet walletTo = new Wallet();
 
@@ -189,9 +202,7 @@ public class UserService {
             if (wallet.getWalletName().equals(currencyTo)) walletTo = wallet;
         }
 
-
-        String rateStr = ExchangeRate.getRate().get(currencyFrom).get(currencyTo);
-        BigDecimal rateDec = new BigDecimal(rateStr);
+        BigDecimal rateDec = new BigDecimal(exchangeRate.get().getRate());
         BigDecimal previous = walletTo.getSum();
         BigDecimal current = amount.multiply(rateDec);
         walletTo.setSum(previous.add(current));
@@ -204,7 +215,7 @@ public class UserService {
         result.put("currency_from", currencyFrom + "_wallet");
         result.put("currency_to", currencyTo + "_wallet");
         result.put("amount_from", amount.toString());
-        result.put("amount_to", current.toString());
+        result.put("amount_to", String.valueOf(current.doubleValue()));
 
         return result;
     }

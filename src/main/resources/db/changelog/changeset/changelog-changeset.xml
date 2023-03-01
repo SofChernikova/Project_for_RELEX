@@ -12,4 +12,7 @@
         <sqlFile path="changeset/tables/create-table-wallet.sql" relativeToChangelogFile="true"/>
         <sqlFile path="changeset/tables/create-table-transaction.sql" relativeToChangelogFile="true"/>
     </changeSet>
+    <changeSet id="Create-tables-1" author="Sofia Chernikova">
+        <sqlFile path="changeset/tables/create-exchange_rate-table.sql" relativeToChangelogFile="true"/>
+    </changeSet>
 </databaseChangeLog>
