@@ -23,7 +23,7 @@ public class CommonService {
 
         boolean found = false;
         for (String s : new String[]{"RUB", "DOL", "EURO"}) {
-            if (request.containsKey(s)) {
+            if (s.equals(request.get("currency"))) {
                 found = true;
                 break;
             }

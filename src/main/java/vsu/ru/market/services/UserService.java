@@ -51,7 +51,7 @@ public class UserService {
         return result;
     }
 
-
+    @Transactional
     public Map<String, String> replenishBalance(User user, Map<String, String> request) {
         Map<String, String> result = new HashMap<>();
 
@@ -86,12 +86,16 @@ public class UserService {
         return result;
     }
 
+    @Transactional
     public Map<String, String> withdrawMoney(User user, Map<String, String> request) {
         Map<String, String> result = new HashMap<>();
 
         String[] requiredParam = {"currency", "count"};
-        if (!AdditionalService.areParametersValid(request, requiredParam, 1)
-                && (!request.containsKey("card") || !request.containsKey("wallet"))) {
+        if (!AdditionalService.areParametersValid(request, requiredParam, 1)){
+            result.put("error", "Нет необходимого параметра!");
+            return result;
+        }
+        if(!request.containsKey("card") && !request.containsKey("wallet")){
             result.put("error", "Нет необходимого параметра!");
             return result;
         }
@@ -136,6 +140,7 @@ public class UserService {
         return result;
     }
 
+    @Transactional
     public Map<String, String> exchangeMoney(User user, Map<String, String> request) {
         Map<String, String> result = new TreeMap<>();
 
